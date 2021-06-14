@@ -8,6 +8,9 @@ ForwardDiff.partials(x::Complex{<:ForwardDiff.Dual}, n::Int) =
 ForwardDiff.npartials(x::Complex{<:ForwardDiff.Dual{T,V,N}}) where {T,V,N} = N
 ForwardDiff.npartials(::Type{<:Complex{<:ForwardDiff.Dual{T,V,N}}}) where {T,V,N} = N
 
+ForwardDiff.tagtype(x::Complex{<:ForwardDiff.Dual{T,V,N}}) where {T,V,N} = T
+ForwardDiff.tagtype(::Type{<:Complex{<:ForwardDiff.Dual{T,V,N}}}) where {T,V,N} = T
+
 # AbstractFFTs.complexfloat(x::AbstractArray{<:ForwardDiff.Dual}) = float.(x .+ 0im)
 AbstractFFTs.complexfloat(x::AbstractArray{<:ForwardDiff.Dual}) = AbstractFFTs.complexfloat.(x)
 AbstractFFTs.complexfloat(d::ForwardDiff.Dual{T,V,N}) where {T,V,N} = convert(ForwardDiff.Dual{T,float(V),N}, d) + 0im
@@ -60,10 +63,11 @@ function _apply_plan(p::AbstractFFTs.Plan, x::AbstractArray)
     dxtils = ntuple(ForwardDiff.npartials(eltype(x))) do n
         p * ForwardDiff.partials.(x, n)
     end
+    T = ForwardDiff.tagtype(eltype(x))
     map(xtil, dxtils...) do val, parts...
         Complex(
-            ForwardDiff.Dual(real(val), map(real, parts)),
-            ForwardDiff.Dual(imag(val), map(imag, parts)),
+            ForwardDiff.Dual{T}(real(val), map(real, parts)),
+            ForwardDiff.Dual{T}(imag(val), map(imag, parts)),
         )
     end
 end
